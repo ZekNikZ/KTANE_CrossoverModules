@@ -1,0 +1,5 @@
+who's on first / memory
+
+symbols / password
+ - 5 'letter' 'word'
+ - have to transliterate to english characters

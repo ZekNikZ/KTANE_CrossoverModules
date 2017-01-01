@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5cf2299c8864afe4ab42466f546ae20d, type: 3}
+  m_Name: WorkshopItem
+  m_EditorClassIdentifier: 
+  WorkshopPublishedFileID: 831134377
+  Title: Crossover Modules
+  Description: "Adds modules that are combinations of two or more other vanilla modules.\n\nCurrent
+    Modules:\n - Complicated Buttons (crossover between The Button and Complicated
+    Wires)\n\nCreated by ZekNikZ"
+  PreviewImage: {fileID: 2800000, guid: 72ac28d2e356fd046884719558abc0b7, type: 3}
+  Tags:
+  - Regular Module
