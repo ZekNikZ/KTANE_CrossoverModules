@@ -46,20 +46,23 @@ public class SymbolicPasswordModule : MonoBehaviour {
 		};
 
 		grid = new int[2, 3];
-		x = Random.Range(0, 5);
-		y = Random.Range(0, 6);
+		x = Random.Range(0, 5); // x=4
+		y = Random.Range(0, 6); // y=5
+		Debug.Log("POS: (" + x + ", " + y + ")");
 		int[] _symbols = new int[6];
-		for (int i = 0; i < 2; i++) {
-			for (int j = 0; j < 3; j++) {
-				_symbols[3*i+j] = symbolTable[x + i, y + j];
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 2; j++) {
+				_symbols[3*j+i] = symbolTable[y + j, x + i];
 			}
 		}
+		string s = "{"; foreach(int z in _symbols) {s += z + ", ";} Debug.Log(s + "}");
 		ShuffleArray(_symbols);
-		for (int i = 0; i < 2; i++) {
-			for (int j = 0; j < 3; j++) {
-				grid[i,j] = _symbols[3*i+j];
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 2; j++) {
+				grid[j,i] = _symbols[3*j+i];
 			}
 		}
+		s = "{"; foreach(int z in _symbols) {s += z + ", ";} Debug.Log(s + "}");
 	}
 
 	void OnActivate () {
@@ -85,7 +88,7 @@ public class SymbolicPasswordModule : MonoBehaviour {
 			temp = grid[0, line - 1];
 			grid[0, line - 1] = grid[1, line - 1];
 			grid[1, line - 1] = temp;
-		} else {
+		} else {//FIXME
 			if (direction == -1) {
 				temp = grid[line - 4, 0];
 				grid[line - 4, 0] = grid[line - 4, 1];
@@ -111,9 +114,9 @@ public class SymbolicPasswordModule : MonoBehaviour {
 	bool Submit () {
 		Audio.PlaySoundAtTransform("tick", this.transform);
 		GetComponent<KMSelectable>().AddInteractionPunch();
-		for (int i = 0; i < 2; i++) {
-			for (int j = 0; j < 3; j++) {
-				if (grid[i,j] != symbolTable[x + i, y + j]) {
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 2; j++) {
+				if (grid[j,i] != symbolTable[y + j, x + i]) {
 					BombModule.HandleStrike();
 					return false;
 				}
