@@ -131,8 +131,9 @@ public class ComplicatedButtonsModule : MonoBehaviour {
 	}
 
 	List<int> DetermineOrder() {
-		int batteries = batteryCount;
-		if (batteryCount > 3) batteries = 3;
+		int _batteries = batteryCount;
+		if (batteryCount > 6) _batteries = 6;
+		int batteries = _batteries / 2;
 		List<int> result = new List<int>(); //TODO: FINISH
 		//return new int[] {orders[IndexOf(words, Label1.text),batteries,0], orders[IndexOf<string>(words, Label1.text),batteries,1], orders[IndexOf(words, Label1.text),batteries,2]};
 		if (DetermineAction(orders[IndexOf(words, Label1.text),batteries,0])) result.Add(orders[IndexOf(words, Label1.text),batteries,0]);
