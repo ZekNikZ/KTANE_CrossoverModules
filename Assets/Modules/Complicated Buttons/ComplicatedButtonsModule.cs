@@ -73,14 +73,8 @@ public class ComplicatedButtonsModule : MonoBehaviour {
 	}
 
 	void OnActivate() {
-		List<string> Response;
-		Response = BombInfo.QueryWidgets (KMBombInfo.QUERYKEY_GET_BATTERIES, null);
-		foreach(string Value in Response) {
-			Dictionary< string,int > batteryInfo = JsonConvert.DeserializeObject <Dictionary<string,int>> (Value);
-			batteryCount += batteryInfo ["numbatteries"];
-		}
 		order = DetermineOrder();
-		Debug.Log("Battery Count: " + batteryCount);
+		Debug.Log("Battery Count: " + BombInfo.GetBatteryCount());
 		string result1 = "Order: {";
 		foreach (int button in order) {
 			result1 += button;
