@@ -111,6 +111,10 @@ public class ComplicatedButtonsModule : MonoBehaviour {
 	}
 
 	void HandlePress(int button) {
+        if (order == null)
+            // Module not yet activated.
+            return;
+
 		KMAudio.PlaySoundAtTransform("tick", this.transform);
 		GetComponent<KMSelectable>().AddInteractionPunch();
 		if (order[currentButton] != button) {
