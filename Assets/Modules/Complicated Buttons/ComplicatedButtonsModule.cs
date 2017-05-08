@@ -1,166 +1,131 @@
-﻿using UnityEngine;
-using UnityEditor;
-using System.Collections;
-using System.Collections.Generic;
-using Newtonsoft.Json;
+﻿using System;
 using System.Linq;
-
 using CrossoverModules;
+using UnityEngine;
 
-public class ComplicatedButtonsModule : MonoBehaviour {
+using Random = UnityEngine.Random;
 
-	public KMBombInfo BombInfo;
-	public KMBombModule BombModule;
-	public KMAudio KMAudio;
-	public KMSelectable Button1;
-	public KMSelectable Button2;
-	public KMSelectable Button3;
-	public TextMesh Label1;
-	public TextMesh Label2;
-	public TextMesh Label3;
-	public Material[] materials;
+public class ComplicatedButtonsModule : MonoBehaviour
+{
+    public KMBombInfo BombInfo;
+    public KMBombModule BombModule;
+    public KMAudio Audio;
+    public KMSelectable[] Buttons;
+    public TextMesh[] Labels;
+    public Material[] materials;
 
-	string[] words = {"Press", "Hold", "Detonate"};
-	int[,,] orders;
-	string instructions = "PDPBRSDSRBPBRRSD";
+    static string[] words = { "Press", "Hold", "Detonate" };
+    static string[] colorNames = { "White", "Red", "Blue", "Purple" };
+    static int[,,] orders = {
+        { { 1, 2, 3 }, { 2, 3, 1 }, { 3, 1, 2 }, { 1, 2, 3 } },
+        { { 2, 1, 3 }, { 3, 2, 1 }, { 1, 3, 2 }, { 2, 3, 1 } },
+        { { 3, 1, 2 }, { 1, 2, 3 }, { 2, 1, 3 }, { 3, 1, 2 } }
+    };
 
-	int batteryCount = 0;
-	List<int> order;
-	int currentButton = 0;
-	int[] actions;
+    const string instructions = "PDPBRSDSRBPBRRSD";
 
-	void Start() {
-		orders = new int[,,]{
-			{{1,2,3}, {2,3,1}, {3,1,2}, {1,2,3}},
-			{{2,1,3}, {3,2,1}, {1,3,2}, {2,3,1}},
-			{{3,1,2}, {1,2,3}, {2,1,3}, {3,1,2}}
-		};
+    int[] order;
+    int currentButton = 0;
+    int[] actions;
+    int moduleId;
 
-		int num1 = 0;
-		int num2 = 1;
-		int num3 = 0;
+    static int moduleIdCounter = 1;
 
-		Button1.OnInteract += HandlePress1;
-		Button2.OnInteract += HandlePress2;
-		Button3.OnInteract += HandlePress3;
+    void Start()
+    {
+        moduleId = moduleIdCounter++;
 
-		int word1 = Random.Range(0,3);
-		int word2 = Random.Range(0,3);
-		int word3 = Random.Range(0,3);
-		Label1.text = words[word1];
-		Label2.text = words[word2];
-		Label3.text = words[word3];
-		if (words[word1] == "Press") num1 += 2;
-		if (words[word2] == "Press") num2 += 2;
-		if (words[word3] == "Press") num3 += 2;
+        actions = new[] { 0, 1, 0 };
 
-		int color1 = Random.Range(0,4);
-		int color2 = Random.Range(0,4);
-		int color3 = Random.Range(0,4);
-		Button1.GetComponent<Renderer>().sharedMaterial = materials[color1];
-		Button2.GetComponent<Renderer>().sharedMaterial = materials[color2];
-		Button3.GetComponent<Renderer>().sharedMaterial = materials[color3];
-		if (color1 == 1 || color1 == 3) num1 += 8;
-		if (color2 == 1 || color2 == 3) num2 += 8;
-		if (color3 == 1 || color3 == 3) num3 += 8;
-		if (color1 == 2 || color1 == 3) num1 += 4;
-		if (color2 == 2 || color2 == 3) num2 += 4;
-		if (color3 == 2 || color3 == 3) num3 += 4;
+        for (int i = 0; i < 3; i++)
+        {
+            var j = i;
+            Buttons[i].OnInteract += delegate { HandlePress(j, Buttons[j]); return false; };
+            Labels[i].text = words[Random.Range(0, 3)];
+            if (Labels[i].text == "Press") actions[i] += 2;
 
-		actions = new int[] {num1, num2, num3};
+            var color = Random.Range(0, 4);
+            Buttons[i].GetComponent<Renderer>().sharedMaterial = materials[color];
+            if (color == 1 || color == 3) actions[i] += 8;
+            if (color == 2 || color == 3) actions[i] += 4;
 
-		GetComponent<KMBombModule>().OnActivate += OnActivate;
-	}
+            Debug.LogFormat("[Complicated Buttons #{0}] Button {1}: {2} {3}", moduleId, i + 1, colorNames[color], Labels[i].text);
+        }
 
-	void OnActivate() {
-		order = DetermineOrder();
-		Debug.Log("Battery Count: " + BombInfo.GetBatteryCount());
-		string result1 = "Order: {";
-		foreach (int button in order) {
-			result1 += button;
-			result1 += ", ";
-		}
-		Debug.Log(result1 + "}");
-		string result2 = "Actions: {";
-		foreach (int button in order) {
-			result2 += instructions[actions[button - 1]];
-			result2 += ", ";
-		}
-		Debug.Log(result2 + "}");
-		string result3 = "All Actions: {";
-		for (int i = 0; i < 3; i++) {
-			result3 += instructions[actions[i]];
-			result3 += ", ";
-		}
-		Debug.Log(result3 + "}");
-	}
+        BombModule.OnActivate += OnActivate;
+    }
 
-	bool HandlePress1() {
-		HandlePress(1);
-		return false;
-	}
+    void HandlePress(int button, KMSelectable buttonSelectable)
+    {
+        if (order == null)
+            // Module not yet activated.
+            return;
 
-	bool HandlePress2() {
-		HandlePress(2);
-		return false;
-	}
+        Audio.PlaySoundAtTransform("tick", buttonSelectable.transform);
+        buttonSelectable.AddInteractionPunch();
 
-	bool HandlePress3() {
-		HandlePress(3);
-		return false;
-	}
+        if (order[currentButton] != button)
+        {
+            Debug.LogFormat("[Complicated Buttons #{0}] You pressed {1}, I expected {2}. Input reset.", moduleId, button, order[currentButton]);
+            BombModule.HandleStrike();
+            currentButton = 0;
+            return;
+        }
+        Debug.LogFormat("[Complicated Buttons #{0}] Pressing {1} was correct.", moduleId, button);
+        currentButton++;
+        if (currentButton >= order.Length)
+        {
+            Debug.LogFormat("[Complicated Buttons #{0}] Module solved.", moduleId);
+            BombModule.HandlePass();
+        }
+    }
 
-	void HandlePress(int button) {
-		KMAudio.PlaySoundAtTransform("tick", this.transform);
-		GetComponent<KMSelectable>().AddInteractionPunch();
-		if (order[currentButton] != button) {
-			BombModule.HandleStrike();
-			currentButton = 0;
-			return;
-		}
-		currentButton++;
-		if (currentButton >= order.Count) {
-			BombModule.HandlePass(); // FIXME
-		}
-	}
+    void OnActivate()
+    {
+        var col = Math.Min(6, BombInfo.GetBatteryCount()) / 2;
+        var row = Array.IndexOf(words, Labels[0].text);
 
-	List<int> DetermineOrder() {
-		int _batteries = batteryCount;
-		if (batteryCount > 6) _batteries = 6;
-		int batteries = _batteries / 2;
-		List<int> result = new List<int>(); //TODO: FINISH
-		//return new int[] {orders[IndexOf(words, Label1.text),batteries,0], orders[IndexOf<string>(words, Label1.text),batteries,1], orders[IndexOf(words, Label1.text),batteries,2]};
-		if (DetermineAction(orders[IndexOf(words, Label1.text),batteries,0])) result.Add(orders[IndexOf(words, Label1.text),batteries,0]);
-		if (DetermineAction(orders[IndexOf(words, Label1.text),batteries,1])) result.Add(orders[IndexOf(words, Label1.text),batteries,1]);
-		if (DetermineAction(orders[IndexOf(words, Label1.text),batteries,2])) result.Add(orders[IndexOf(words, Label1.text),batteries,2]);
-		if (result.Count() == 0) result.Add(orders[IndexOf(words, Label1.text),batteries,1]);
-		return result;
-	}
+        Debug.LogFormat("[Complicated Buttons #{0}] Button order: {1}", moduleId, string.Join(", ", Enumerable.Range(0, 3).Select(i => orders[row, col, i].ToString()).ToArray()));
 
-	bool DetermineAction(int button) {
-		char ins = instructions[actions[button - 1]];
-		switch (ins) {
-			case 'P':
-				return true;
-			case 'D':
-				return false;
-			case 'R':
-				return KMBombInfoExtensions.GetSerialNumber(BombInfo).Distinct().Count() != KMBombInfoExtensions.GetSerialNumber(BombInfo).Length;
-			case 'S':
-				return KMBombInfoExtensions.IsPortPresent(BombInfo, KMBombInfoExtensions.KnownPortType.Serial);
-			case 'B':
-				return KMBombInfoExtensions.GetBatteryHolderCount(BombInfo) >= 2;
-			default:
-				return false;
-		}
-	}
+        order = Enumerable.Range(0, 3).Where(i => DetermineAction(orders[row, col, i])).Select(i => orders[row, col, i]).ToArray();
 
-	int IndexOf<T>(T[] array, T element) {
-		for (int i = 0; i < array.Length; i++) {
-			if (array[i].Equals(element)) {
-				return i;
-			}
-		}
-		return -1;
-	}
+        if (order.Length == 0)
+        {
+            order = new[] { orders[row, col, 1] };
+            Debug.LogFormat("[Complicated Buttons #{0}] No buttons to push. Must push Button {1}.", moduleId, order[0]);
+        }
+        else
+            Debug.LogFormat("[Complicated Buttons #{0}] Buttons to push: {1}", moduleId, string.Join(", ", order.Select(i => i.ToString()).ToArray()));
+    }
+
+    bool DetermineAction(int button)
+    {
+        switch (instructions[actions[button - 1]])
+        {
+            case 'P':
+                Debug.LogFormat("[Complicated Buttons #{0}] Button {1}: Push.", moduleId, button);
+                return true;
+            case 'R':
+                {
+                    var res = BombInfo.GetSerialNumber().Distinct().Count() != BombInfo.GetSerialNumber().Length;
+                    Debug.LogFormat("[Complicated Buttons #{0}] Button {1}: Push if duplicate serial number characters ({2}).", moduleId, button, res);
+                    return res;
+                }
+            case 'S':
+                {
+                    var res = BombInfo.IsPortPresent(KMBombInfoExtensions.KnownPortType.Serial);
+                    Debug.LogFormat("[Complicated Buttons #{0}] Button {1}: Push if serial port present ({2}).", moduleId, button, res);
+                    return res;
+                }
+            case 'B':
+                {
+                    var res = BombInfo.GetBatteryHolderCount() >= 2;
+                    Debug.LogFormat("[Complicated Buttons #{0}] Button {1}: Push if two or more battery holders ({2}).", moduleId, button, res);
+                    return res;
+                }
+            default:
+                Debug.LogFormat("[Complicated Buttons #{0}] Button {1}: Do not push.", moduleId, button);
+                return false;
+        }
+    }
 }

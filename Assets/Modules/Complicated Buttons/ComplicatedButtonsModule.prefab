@@ -1016,13 +1016,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BombInfo: {fileID: 114000012589991010}
   BombModule: {fileID: 114000011372992222}
-  KMAudio: {fileID: 114000014115304694}
-  Button1: {fileID: 114000010832220864}
-  Button2: {fileID: 114000011169797046}
-  Button3: {fileID: 114000014050788838}
-  Label1: {fileID: 102000014109040744}
-  Label2: {fileID: 102000012193421754}
-  Label3: {fileID: 102000013628625980}
+  Audio: {fileID: 114000014115304694}
+  Buttons:
+  - {fileID: 114000010832220864}
+  - {fileID: 114000011169797046}
+  - {fileID: 114000014050788838}
+  Labels:
+  - {fileID: 102000014109040744}
+  - {fileID: 102000012193421754}
+  - {fileID: 102000013628625980}
   materials:
   - {fileID: 2100000, guid: 0e8ebb592e392d442b18e5bbce955d35, type: 2}
   - {fileID: 2100000, guid: f291f3d0417ef2644be3c5ec5a716f58, type: 2}
