@@ -1,137 +1,146 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Linq;
+using UnityEngine;
 
-using CrossoverModules;
+public class SymbolicPasswordModule : MonoBehaviour
+{
+    public KMBombInfo BombInfo;
+    public KMBombModule BombModule;
+    public KMAudio Audio;
+    public KMSelectable[] buttons;
+    public KMSelectable submitButton;
+    public MeshRenderer[] labels;
+    public Material[] symbols;
+    public Material blankScreen;
 
-public class SymbolicPasswordModule : MonoBehaviour {
+    // This is the arrangement of the symbols as printed in the manual.
+    static char[,] symbolTable = new char[,] {
+        {'Ϙ', 'Ӭ', '©', 'Ϭ', 'Ψ', 'Ϭ', '¿'},
+        {'Ѧ', 'Ϙ', 'Ѽ', '¶', 'ټ', 'Ӭ', '☆'},
+        {'ƛ', 'Ͽ', 'Ҩ', 'Ѣ', 'Ѣ', '҂', 'Ϙ'},
+        {'Ϟ', 'Ҩ', 'Җ', 'Ѭ', 'Ͼ', 'æ', 'ƛ'},
+        {'Ѭ', '☆', 'Ԇ', 'Җ', '¶', 'Ψ', 'Ҩ'},
+        {'ϗ', 'ϗ', 'ƛ', '¿', 'Ѯ', 'Ҋ', 'Ӭ'},
+        {'Ͽ', '¿', '☆', 'ټ', '★', 'Ω', 'Ѽ'}
+    };
 
-	public KMBombInfo BombInfo;
-	public KMBombModule BombModule;
-	public KMAudio Audio;
-	public KMSelectable[] buttons;
-	public KMSelectable submitButton;
-	public MeshRenderer[] labels;
-	public Material[] symbols;
-	public Material blankScreen;
+    // This is the order in which the materials are stored in ‘symbols’.
+    static string characters = "©★☆ټҖΩѬѼϗϬϞѦæԆӬҊѮ¿¶ϾϿΨҨ҂ϘƛѢ";
 
-	int[,] grid;
-	int[,] symbolTable;
-	int x;
-	int y;
+    char[,] display;
+    int x;
+    int y;
+    int moduleId;
+    static int moduleIdCounter = 1;
 
-	void Start () {
-		GetComponent<KMBombModule>().OnActivate += OnActivate;
+    void Start()
+    {
+        moduleId = moduleIdCounter++;
+        GetComponent<KMBombModule>().OnActivate += OnActivate;
 
-		buttons[0].OnInteract += B1;
-		buttons[1].OnInteract += B2;
-		buttons[2].OnInteract += B3;
-		buttons[3].OnInteract += B4;
-		buttons[4].OnInteract += B5;
-		buttons[5].OnInteract += B6;
-		buttons[6].OnInteract += B7;
-		buttons[7].OnInteract += B8;
-		buttons[8].OnInteract += B9;
-		buttons[9].OnInteract += B10;
+        buttons[0].OnInteract += delegate { return RotateVertical(buttons[0], 1); };
+        buttons[1].OnInteract += delegate { return RotateVertical(buttons[1], 1); };
+        buttons[2].OnInteract += delegate { return RotateVertical(buttons[2], 2); };
+        buttons[3].OnInteract += delegate { return RotateVertical(buttons[3], 2); };
+        buttons[4].OnInteract += delegate { return RotateVertical(buttons[4], 3); };
+        buttons[5].OnInteract += delegate { return RotateVertical(buttons[5], 3); };
+        buttons[6].OnInteract += delegate { return RotateHorizontal(buttons[6], 0, -1); };
+        buttons[7].OnInteract += delegate { return RotateHorizontal(buttons[7], 0, 1); };
+        buttons[8].OnInteract += delegate { return RotateHorizontal(buttons[8], 1, -1); };
+        buttons[9].OnInteract += delegate { return RotateHorizontal(buttons[9], 1, 1); };
 
-		submitButton.OnInteract += Submit;
+        submitButton.OnInteract += Submit;
 
-		symbolTable = new int[,] {
-			{24, 14, 0, 9, 21, 9, 17},
-			{11, 24, 7, 18, 3, 14, 2},
-			{25, 20, 22, 26, 26, 23, 24},
-			{10, 22, 4, 6, 19, 12, 25},
-			{6, 2, 13, 4, 18, 21, 22},
-			{8, 8, 25, 17, 16, 15, 14},
-			{20, 17, 2, 3, 1, 5, 7}
-		};
+        x = Random.Range(0, 5); // x = 0–4
+        y = Random.Range(0, 6); // y = 0–5
+        Debug.LogFormat("[Symbolic Password #{0}] Position in grid: ({1}, {2})", moduleId, x + 1, y + 1);
 
-		grid = new int[2, 3];
-		x = Random.Range(0, 5); // x=4
-		y = Random.Range(0, 6); // y=5
-		Debug.Log("POS: (" + x + ", " + y + ")");
-		int[] _symbols = new int[6];
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 2; j++) {
-				_symbols[3*j+i] = symbolTable[y + j, x + i];
-			}
-		}
-		string s = "{"; foreach(int z in _symbols) {s += z + ", ";} Debug.Log(s + "}");
-		ShuffleArray(_symbols);
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 2; j++) {
-				grid[j,i] = _symbols[3*j+i];
-			}
-		}
-		s = "{"; foreach(int z in _symbols) {s += z + ", ";} Debug.Log(s + "}");
-	}
+        var initialOrder = Enumerable.Range(0, 6).ToArray();
+        ShuffleArray(initialOrder);
+        display = new char[2, 3];
+        for (int i = 0; i < 6; i++)
+            display[i / 3, i % 3] = symbolTable[y + initialOrder[i] / 3, x + initialOrder[i] % 3];
+        Debug.LogFormat("[Symbolic Password #{0}] Initial display: {1} / {2}", moduleId, new string(Enumerable.Range(0, 3).Select(i => display[0, i]).ToArray()), new string(Enumerable.Range(0, 3).Select(i => display[1, i]).ToArray()));
+        Debug.LogFormat("[Symbolic Password #{0}] Solution: {1}", moduleId, new string(Enumerable.Range(0, 6).Select(i => symbolTable[y + i / 3, x + i % 3]).ToArray()).Insert(3, " / "));
+    }
 
-	void OnActivate () {
-		RedrawSymbols();
-	}
-	
-	bool B1 () {return RotateSymbols(1);}
-	bool B2 () {return RotateSymbols(1);}
-	bool B3 () {return RotateSymbols(2);}
-	bool B4 () {return RotateSymbols(2);}
-	bool B5 () {return RotateSymbols(3);}
-	bool B6 () {return RotateSymbols(3);}
-	bool B7 () {return RotateSymbols(4, -1);}
-	bool B8 () {return RotateSymbols(4, 1);}
-	bool B9 () {return RotateSymbols(5, -1);}
-	bool B10 () {return RotateSymbols(5, 1);}
+    void OnActivate()
+    {
+        RedrawSymbols();
+    }
 
-	bool RotateSymbols (int line, int direction = 0) {
-		Audio.PlaySoundAtTransform("tick", this.transform);
-		GetComponent<KMSelectable>().AddInteractionPunch();
-		int temp = -1;
-		if (line < 4) {
-			temp = grid[0, line - 1];
-			grid[0, line - 1] = grid[1, line - 1];
-			grid[1, line - 1] = temp;
-		} else {//FIXME
-			if (direction == -1) {
-				temp = grid[line - 4, 0];
-				grid[line - 4, 0] = grid[line - 4, 1];
-				grid[line - 4, 1] = grid[line - 4, 2];
-				grid[line - 4, 2] = temp;
-			} else {
-				temp = grid[line - 4, 2];
-				grid[line - 4, 2] = grid[line - 4, 1];
-				grid[line - 4, 1] = grid[line - 4, 0];
-				grid[line - 4, 0] = temp;
-			}
-		}
-		RedrawSymbols();
-		return false;
-	}
+    bool RotateVertical(KMSelectable button, int column)
+    {
+        Audio.PlaySoundAtTransform("tick", button.transform);
+        button.AddInteractionPunch();
 
-	void RedrawSymbols () {
-		for (int i = 0; i < 6; i++) {
-			labels[i].sharedMaterial = symbols[grid[i / 3, i % 3]];
-		}
-	}
+        var temp = display[0, column - 1];
+        display[0, column - 1] = display[1, column - 1];
+        display[1, column - 1] = temp;
+        RedrawSymbols();
+        return false;
+    }
 
-	bool Submit () {
-		Audio.PlaySoundAtTransform("tick", this.transform);
-		GetComponent<KMSelectable>().AddInteractionPunch();
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 2; j++) {
-				if (grid[j,i] != symbolTable[y + j, x + i]) {
-					BombModule.HandleStrike();
-					return false;
-				}
-			}
-		}
-		BombModule.HandlePass();
-		return false;
-	}
+    bool RotateHorizontal(KMSelectable button, int line, int direction = 0)
+    {
+        Audio.PlaySoundAtTransform("tick", button.transform);
+        button.AddInteractionPunch();
 
-	void ShuffleArray<T>(T[] arr) {
-		for (int i = arr.Length - 1; i > 0; i--) {
-			int r = Random.Range(0, i);
-			T tmp = arr[i];
-			arr[i] = arr[r];
-			arr[r] = tmp;
-		}
-	}
+        if (direction == -1)
+        {
+            var temp = display[line, 0];
+            display[line, 0] = display[line, 1];
+            display[line, 1] = display[line, 2];
+            display[line, 2] = temp;
+        }
+        else
+        {
+            var temp = display[line, 2];
+            display[line, 2] = display[line, 1];
+            display[line, 1] = display[line, 0];
+            display[line, 0] = temp;
+        }
+
+        RedrawSymbols();
+        return false;
+    }
+
+    void RedrawSymbols()
+    {
+        for (int i = 0; i < 6; i++)
+            labels[i].sharedMaterial = symbols[characters.IndexOf(display[i / 3, i % 3])];
+    }
+
+    bool Submit()
+    {
+        Audio.PlaySoundAtTransform("tick", this.transform);
+        GetComponent<KMSelectable>().AddInteractionPunch();
+        Debug.LogFormat("[Symbolic Password #{0}] You submitted: {1} / {2}", moduleId, new string(Enumerable.Range(0, 3).Select(i => display[0, i]).ToArray()), new string(Enumerable.Range(0, 3).Select(i => display[1, i]).ToArray()));
+
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < 2; j++)
+            {
+                if (display[j, i] != symbolTable[y + j, x + i])
+                {
+                    BombModule.HandleStrike();
+                    return false;
+                }
+            }
+        }
+
+        Debug.LogFormat("[Symbolic Password #{0}] Module solved.", moduleId);
+        BombModule.HandlePass();
+        return false;
+    }
+
+    void ShuffleArray<T>(T[] arr)
+    {
+        for (int i = arr.Length - 1; i > 0; i--)
+        {
+            int r = Random.Range(0, i);
+            T tmp = arr[i];
+            arr[i] = arr[r];
+            arr[r] = tmp;
+        }
+    }
 }
