@@ -40,7 +40,7 @@ public class ComplicatedButtonsModule : MonoBehaviour
         for (int i = 0; i < 3; i++)
         {
             var j = i;
-            Buttons[i].OnInteract += delegate { HandlePress(j, Buttons[j]); return false; };
+            Buttons[i].OnInteract += delegate { HandlePress(j + 1, Buttons[j]); return false; };
             Labels[i].text = words[Random.Range(0, 3)];
             if (Labels[i].text == "Press") actions[i] += 2;
 
