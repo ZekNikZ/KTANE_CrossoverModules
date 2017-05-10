@@ -736,6 +736,7 @@ public class TestHarness : MonoBehaviour
                         DoInteractionStart(selectable);
                         heldSelectables.Add(selectable);
                     }
+                }
                 else if (currentObject is string)
                 {
                     Debug.Log("Twitch handler sent: " + currentObject);
