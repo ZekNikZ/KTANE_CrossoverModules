@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using CrossoverModules;
 using UnityEngine;
@@ -127,5 +128,59 @@ public class ComplicatedButtonsModule : MonoBehaviour
                 Debug.LogFormat("[Complicated Buttons #{0}] Button {1}: Do not push.", moduleId, button);
                 return false;
         }
+    }
+
+    KMSelectable[] ProcessTwitchCommand(string command)
+    {
+        command = command.Trim().ToLowerInvariant();
+        var pieces = command.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (pieces.Length < 2 || pieces[0] != "press")
+            return null;
+
+        var list = new List<KMSelectable>();
+        for (int i = 1; i < pieces.Length; i++)
+        {
+            switch (pieces[i])
+            {
+                case "t":
+                case "top":
+                case "u":
+                case "up":
+                case "upper":
+                case "1":
+                case "first":
+                case "1st":
+                    list.Add(Buttons[0]);
+                    break;
+
+                case "m":
+                case "middle":
+                case "c":
+                case "center":
+                case "centre":
+                case "2":
+                case "second":
+                case "2nd":
+                    list.Add(Buttons[1]);
+                    break;
+
+                case "b":
+                case "bottom":
+                case "d":
+                case "down":
+                case "l":
+                case "lower":
+                case "3":
+                case "third":
+                case "3rd":
+                    list.Add(Buttons[2]);
+                    break;
+
+                default:
+                    return null;
+            }
+        }
+        return list.ToArray();
     }
 }
