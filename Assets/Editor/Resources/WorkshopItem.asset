@@ -17,7 +17,7 @@ MonoBehaviour:
     Modules:\r\n - Complicated Buttons (crossover between The Button and Complicated
     Wires) [complicatedButtonsModule]\r\n - Symbolic Password (crossover between Keypad
     and Password) [symbolicPasswordModule]\r\n\r\nManuals can be found here: https://drive.google.com/drive/folders/0B5c5zJGxgBtuUlFRN3hLZmlpQkU?usp=sharing\r\n\r\nCreated
-    by ZekNikZ"
+    by ZekNikZ\n\nThanks to Timwi for help with logging and code cleanup!"
   PreviewImage: {fileID: 2800000, guid: 72ac28d2e356fd046884719558abc0b7, type: 3}
   Tags:
   - Regular Module

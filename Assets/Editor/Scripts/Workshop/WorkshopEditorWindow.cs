@@ -221,7 +221,7 @@ public class WorkshopEditorWindow : EditorWindow
         Debug.LogFormat("Uploading contents of {0}", folder);
         SteamUGC.SetItemContent(ugcUpdateHandle, folder);
 
-        var updateUGCCall = SteamUGC.SubmitItemUpdate(ugcUpdateHandle, changeNotes);
+        var updateUGCCall = SteamUGC.SubmitItemUpdate(ugcUpdateHandle, changeNotes + "\n\nPlease contact @ZekNikZ#0878 in Discord with any questions or concerns.");
         onItemUpdateCallResultHandler.Set(updateUGCCall);
     }
 
