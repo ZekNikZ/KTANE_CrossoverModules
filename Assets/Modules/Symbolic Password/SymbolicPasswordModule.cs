@@ -1,5 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+
+using Random = UnityEngine.Random;
 
 public class SymbolicPasswordModule : MonoBehaviour
 {
@@ -142,5 +146,64 @@ public class SymbolicPasswordModule : MonoBehaviour
             arr[i] = arr[r];
             arr[r] = tmp;
         }
+    }
+
+    KMSelectable[] ProcessTwitchCommand(string command)
+    {
+        command = command.Trim().ToLowerInvariant();
+        var pieces = command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+        if (pieces.Length >= 2 && pieces[0] == "cycle")
+        {
+            var list = new List<KMSelectable>();
+            int button;
+            for (int i = 1; i < pieces.Length; i++)
+            {
+                switch (pieces[i])
+                {
+                    case "l": case "left": list.Add(buttons[0]); break;
+                    case "m": case "middle": case "c": case "center": case "centre": list.Add(buttons[2]); break;
+                    case "r": case "right": list.Add(buttons[4]); break;
+
+                    case "t":
+                    case "top":
+                    case "u":
+                    case "up":
+                    case "upper":
+                        switch (pieces[i + 1])
+                        {
+                            case "l": case "left": button = 6; break;
+                            case "r": case "right": button = 7; break;
+                            default: return null;
+                        }
+                        list.Add(buttons[button]);
+                        i++;
+                        break;
+
+                    case "b":
+                    case "bottom":
+                    case "d":
+                    case "down":
+                    case "lower":
+                        switch (pieces[i + 1])
+                        {
+                            case "l": case "left": button = 8; break;
+                            case "r": case "right": button = 9; break;
+                            default: return null;
+                        }
+                        list.Add(buttons[button]);
+                        i++;
+                        break;
+
+                    default:
+                        return null;
+                }
+            }
+            return list.ToArray();
+        }
+        else if (pieces.Length == 1 && pieces[0] == "submit")
+            return new[] { submitButton };
+        else
+            return null;
     }
 }
