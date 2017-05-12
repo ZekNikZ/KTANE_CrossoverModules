@@ -13,5 +13,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: crossoverModules
   title: Crossover Modules
-  version: 2.5
+  version: 2.6
   outputFolder: build
