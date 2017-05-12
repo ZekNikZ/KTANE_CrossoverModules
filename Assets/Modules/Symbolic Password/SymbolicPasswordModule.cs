@@ -126,6 +126,7 @@ public class SymbolicPasswordModule : MonoBehaviour
             {
                 if (display[j, i] != symbolTable[y + j, x + i])
                 {
+                    Debug.LogFormat("[Symbolic Password #{0}] Wrong solution. Strike.", moduleId);
                     BombModule.HandleStrike();
                     return false;
                 }
