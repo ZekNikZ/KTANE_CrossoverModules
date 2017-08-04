@@ -15,6 +15,8 @@ public class SymbolicPasswordModule : MonoBehaviour
     public MeshRenderer[] labels;
     public Material[] symbols;
     public Material blankScreen;
+    public Material WhiteButton;
+    public Material RedButton;
 
     // This is the arrangement of the symbols as printed in the manual.
     static char[,] symbolTable = new char[,] {
@@ -52,6 +54,16 @@ public class SymbolicPasswordModule : MonoBehaviour
         buttons[8].OnInteract += delegate { return RotateHorizontal(buttons[8], 1, -1); };
         buttons[9].OnInteract += delegate { return RotateHorizontal(buttons[9], 1, 1); };
 
+        /*
+        for (int i = 0; i < 10; i += 2) {
+            var j = i;
+            var k = i + 1;
+            buttons[j].OnSelect += delegate { SelectGroup(j, k); };
+            buttons[k].OnSelect += delegate { SelectGroup(j, k); };
+            buttons[j].OnDeselect += delegate { DeselectGroup(j, k); };
+            buttons[k].OnDeselect += delegate { DeselectGroup(j, k); };
+        }
+        */
         submitButton.OnInteract += Submit;
 
         x = Random.Range(0, 5); // x = 0–4
@@ -75,7 +87,7 @@ public class SymbolicPasswordModule : MonoBehaviour
     bool RotateVertical(KMSelectable button, int column)
     {
         Audio.PlaySoundAtTransform("tick", button.transform);
-        button.AddInteractionPunch();
+        button.AddInteractionPunch(0.25f);
 
         var temp = display[0, column - 1];
         display[0, column - 1] = display[1, column - 1];
@@ -87,7 +99,7 @@ public class SymbolicPasswordModule : MonoBehaviour
     bool RotateHorizontal(KMSelectable button, int line, int direction = 0)
     {
         Audio.PlaySoundAtTransform("tick", button.transform);
-        button.AddInteractionPunch();
+        button.AddInteractionPunch(0.25f);
 
         if (direction == -1)
         {
@@ -147,6 +159,18 @@ public class SymbolicPasswordModule : MonoBehaviour
             arr[i] = arr[r];
             arr[r] = tmp;
         }
+    }
+
+    void SelectGroup(int b1, int b2) {
+        Debug.LogFormat("[Symbolic Password #{0}] Group <{1},{2}> selected.", moduleId, b1 + 1, b2 + 2);
+        buttons[b1].gameObject.GetComponent<Renderer>().sharedMaterial = RedButton;
+        buttons[b2].gameObject.GetComponent<Renderer>().sharedMaterial = RedButton;
+    }
+
+    void DeselectGroup(int b1, int b2) {
+        Debug.LogFormat("[Symbolic Password #{0}] Group <{1},{2}> deselected.", moduleId, b1 + 1, b2 + 2);
+        buttons[b1].gameObject.GetComponent<Renderer>().sharedMaterial = WhiteButton;
+        buttons[b2].gameObject.GetComponent<Renderer>().sharedMaterial = WhiteButton;
     }
 
     KMSelectable[] ProcessTwitchCommand(string command)
