@@ -552,10 +552,6 @@ td, th {
 	text-align: center;
 }
 
-.venn-buttons table td {
-	text-align: center;
-}
-
 #venndiagram {
 	display: block;
 	width: 70%;

@@ -28,5 +28,7 @@ sysinfo.txt
 *.csproj
 /Assets/Generated.meta
 Assets/Generated
-# Gen
+Gen
 
+
+.vs/

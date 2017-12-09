@@ -34,7 +34,7 @@ public class WorkshopEditorWindow : EditorWindow
         Debug.LogWarning(pchDebugText);
     }
 
-    [MenuItem("Keep Talking ModKit/Steam Workshop Tool", priority = 20)]
+    [MenuItem("Keep Talking ModKit/Steam Workshop Tool _#F6", priority = 20)]
     protected static void ShowWindow()
     {
         WorkshopEditorWindow window = EditorWindow.GetWindow<WorkshopEditorWindow>("Workshop");
@@ -200,7 +200,7 @@ public class WorkshopEditorWindow : EditorWindow
         ugcUpdateHandle = SteamUGC.StartItemUpdate(KTANE_APP_ID, new PublishedFileId_t(currentWorkshopItem.WorkshopPublishedFileID));
 
         SteamUGC.SetItemTitle(ugcUpdateHandle, currentWorkshopItem.Title);
-        SteamUGC.SetItemDescription(ugcUpdateHandle, currentWorkshopItem.Description);
+        SteamUGC.SetItemDescription(ugcUpdateHandle, ModConfig.Description);
 
         string[] tags = GetTags();
         if (tags != null && tags.Length > 0)
@@ -208,9 +208,9 @@ public class WorkshopEditorWindow : EditorWindow
             SteamUGC.SetItemTags(ugcUpdateHandle, GetTags());
         }
 
-        if (currentWorkshopItem.PreviewImage != null)
+        if (ModConfig.PreviewImage != null)
         {
-            string previewImagePath = AssetDatabase.GetAssetPath(currentWorkshopItem.PreviewImage);
+            string previewImagePath = AssetDatabase.GetAssetPath(ModConfig.PreviewImage);
             previewImagePath = Path.GetFullPath(previewImagePath);
             Debug.LogFormat("Setting preview image path to: {0}", previewImagePath);
             SteamUGC.SetItemPreview(ugcUpdateHandle, previewImagePath);
@@ -221,7 +221,7 @@ public class WorkshopEditorWindow : EditorWindow
         Debug.LogFormat("Uploading contents of {0}", folder);
         SteamUGC.SetItemContent(ugcUpdateHandle, folder);
 
-        var updateUGCCall = SteamUGC.SubmitItemUpdate(ugcUpdateHandle, changeNotes + "\n\nPlease contact @ZekNikZ#0878 in Discord with any questions or concerns.");
+        var updateUGCCall = SteamUGC.SubmitItemUpdate(ugcUpdateHandle, changeNotes);
         onItemUpdateCallResultHandler.Set(updateUGCCall);
     }
 
