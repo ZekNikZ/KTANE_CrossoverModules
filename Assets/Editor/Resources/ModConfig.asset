@@ -14,9 +14,9 @@ MonoBehaviour:
   id: crossoverModules
   title: Crossover Modules
   description: "Combining multiple modules is so fun!\n\nCurrent Modules:\n - Complicated
-    Buttons\n - Symbolic Password\n\nDesigned and implemented by ZekNikZ.\n\nModule
-    IDs: complicatedButtonsModule, symbolicPasswordModule\n\nFind both HTML and PDF
-    manuals at https://ktane.timwi.de/"
-  version: 5.0beta3
+    Buttons\n - Symbolic Password\n - Button Sequences\n\nDesigned and implemented
+    by ZekNikZ.\n\nModule IDs: complicatedButtonsModule, symbolicPasswordModule, buttonSequencesModule\n\nFind
+    both HTML and PDF manuals at https://ktane.timwi.de/"
+  version: 5.0.2
   outputFolder: build
-  previewImage: {fileID: 2800000, guid: a6da28e95eef21949a38c44d70d386c5, type: 3}
+  previewImage: {fileID: 2800000, guid: 72ac28d2e356fd046884719558abc0b7, type: 3}

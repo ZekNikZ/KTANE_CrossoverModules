@@ -19,7 +19,8 @@ public class ButtonSequencesModule : MonoBehaviour {
 
     // Lights
     public Renderer[] Lights;
-    public Material[] LightColors; // ORANGE RED GREEN BLUE YELLOW WHITE
+    public Material[] LightColors; // ORANGE RED GREEN BLUE YELLOW WHITE MAGENTA BLACK
+    public GameObject[] StageIndicatorLights;
 
     // Animators
     public Animator DoorAnimator;
@@ -43,8 +44,8 @@ public class ButtonSequencesModule : MonoBehaviour {
     private ButtonInfo[,] PanelInfo;
 
     // Module Identifier
-    int moduleId;
-    static int moduleIdCounter = 1;
+    private int moduleId;
+    private static int moduleIdCounter = 1;
 
     // Helper Class
     private class ButtonInfo {
@@ -75,12 +76,10 @@ public class ButtonSequencesModule : MonoBehaviour {
         }
     };
 
-    private int[] HoldLightTable = new int[] { 2, 4, 0, 1 }; // RED BLUE YELLOW WHITE (mod 5)
-
     // Solution
     private int PanelCount;
-    private const int MinPanels = 3;
-    private const int MaxPanels = 5;
+    private const int MinPanels = 4;
+    private const int MaxPanels = 4;
     private int[,] Solution;
 
     // Volatile Fields
@@ -89,11 +88,11 @@ public class ButtonSequencesModule : MonoBehaviour {
     private int[,] currentState;
     private int[,] lightState;
     private bool buttonsActive = true;
-    int holdTimer = -1;
-    int heldButton = -1;
-    int holdBombTime = -1;
+    private float holdTimer = -1;
+    private int heldButton = -1;
+    private int holdBombTime = -1;
 
-    void Awake() {
+    private void Awake() {
         // Module Identifier
         moduleId = moduleIdCounter++;
 
@@ -114,6 +113,22 @@ public class ButtonSequencesModule : MonoBehaviour {
         PanelCount = Random.Range(MinPanels, MaxPanels + 1);
 
         PanelInfo = new ButtonInfo[PanelCount, 3];
+        /*
+        ButtonInfo[] buttons = new ButtonInfo[15];
+
+        for (int i = 0; i < 11; i++) {
+            buttons[i] = new ButtonInfo(Random.Range(0, 4), Random.Range(0, 4), Random.Range(0, 3));
+        }
+        for (int i = 11; i < 15; i++) {
+            buttons[i] = null;
+        }
+        ShuffleArray(buttons);
+
+        for (int i = 0; i < PanelCount; i++) {
+            for (int j = 0; j < 3; j++) {
+                PanelInfo[i, j] = buttons[i*3 + j];
+            }
+        }*/
 
         for (int i = 0; i < PanelCount; i++) {
             for (int j = 0; j < 3; j++) {
@@ -130,34 +145,57 @@ public class ButtonSequencesModule : MonoBehaviour {
         lightState = new int[PanelCount, 3];
         UpdateLights();
 
+        for (int i = 0; i < StageIndicatorLights.Length; i++) {
+            StageIndicatorLights[i].SetActive(false);
+        }
+
         Solution = new int[PanelCount, 3];
         currentState = new int[PanelCount, 3];
         FindSolution();
     }
 
-    void Update() {
-        if (holdTimer >= 0) holdTimer++;
-        if (holdTimer > 40 && holdBombTime == -1) {
-            int color = Random.Range(0, 4);
-            switch(color) {
-                case 0:
-                    lightState[currentPanel, heldButton] = 3;
-                    holdBombTime = 4;
-                    break;
-                case 1:
-                    lightState[currentPanel, heldButton] = 5;
-                    holdBombTime = 1;
-                    break;
-                case 2:
-                    lightState[currentPanel, heldButton] = 4;
-                    holdBombTime = 5;
-                    break;
-                case 3:
-                    lightState[currentPanel, heldButton] = 1;
-                    holdBombTime = 1;
-                    break;
+    private void Update() {
+        //if (holdTimer >= 0) holdTimer++;
+        if (holdBombTime == -1 && holdTimer > 0 && Time.time - holdTimer > 0.5f) {
+            if (Solution[currentPanel, heldButton] == 1) {
+                Debug.LogFormat("[Button Sequences #{0}] Panel {1} Button {2} is being held, even though it shouldn't be.", moduleId, currentPanel + 1, heldButton + 1);
+            } else {
+                string colorName;
+                int color = Random.Range(0, 5);
+                switch (color) {
+                    case 0:
+                        lightState[currentPanel, heldButton] = 3;
+                        holdBombTime = 2;
+                        colorName = "BLUE";
+                        break;
+                    case 1:
+                        lightState[currentPanel, heldButton] = 5;
+                        holdBombTime = 7;
+                        colorName = "WHITE";
+                        break;
+                    case 2:
+                        lightState[currentPanel, heldButton] = 4;
+                        holdBombTime = 3;
+                        colorName = "YELLOW";
+                        break;
+                    case 3:
+                        lightState[currentPanel, heldButton] = 6;
+                        holdBombTime = 4;
+                        colorName = "MAGENTA";
+                        break;
+                    case 4:
+                        lightState[currentPanel, heldButton] = 8;
+                        holdBombTime = 0;
+                        colorName = "CYAN";
+                        break;
+                    default:
+                        holdBombTime = -1;
+                        colorName = "ERROR";
+                        break;
+                }
+                Debug.LogFormat("[Button Sequences #{0}] Panel {1} Button {2} is being held. LED Color: {3}. Release when timer contains a \"{4}\".", moduleId, currentPanel + 1, heldButton + 1, colorName, holdBombTime);
+                UpdateLights();
             }
-            UpdateLights();
         }
         if (needsUpdate && DoorAnimator.GetCurrentAnimatorStateInfo(0).IsName("DoorOpen")) {
             UpdateButtons();
@@ -166,7 +204,7 @@ public class ButtonSequencesModule : MonoBehaviour {
         }
     }
 
-    void OnActivate() {
+    private void OnActivate() {
         UpdateButtons();
         UpdateLights();
         DoorAnimator.Play("Begin");
@@ -176,34 +214,43 @@ public class ButtonSequencesModule : MonoBehaviour {
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.WireSequenceMechanism, this.transform);
     }
 
-    void FindSolution() {
+    private void FindSolution() {
         Debug.LogFormat("[Button Sequences #{0}] Panel Count: {1}", moduleId, PanelCount);
         Debug.LogFormat("[Button Sequences #{0}] Solution:", moduleId);
         int[] occurences = new int[Colors.Length];
         for (int i = 0; i < PanelCount; i++) {
             for (int j = 0; j < 3; j++) {
-                Solution[i, j] = (OccurenceTable[PanelInfo[i, j].color, (++occurences[PanelInfo[i, j].color] - 1) % 5, 0] == PanelInfo[i, j].text ? 1 : 0) + (OccurenceTable[PanelInfo[i, j].color, (occurences[PanelInfo[i, j].color] - 1) % 5, 1] == PanelInfo[i, j].shape ? 1 : 0);
-                Debug.LogFormat("[Button Sequences #{0}] Panel {1} Button {2} ({3} {4} {5}): Occurence #{6} {7}", moduleId, i + 1, j + 1, ColorNames[PanelInfo[i, j].color], ShapeNames[PanelInfo[i, j].shape], LabelNames[PanelInfo[i, j].text], occurences[PanelInfo[i, j].color], ActionNames[Solution[i, j]]);
+                if (PanelInfo[i, j] == null) {
+                    Solution[i, j] = 0;
+                } else {
+                    Solution[i, j] = (OccurenceTable[PanelInfo[i, j].color, (++occurences[PanelInfo[i, j].color] - 1) % 5, 0] == PanelInfo[i, j].text ? 1 : 0) + (OccurenceTable[PanelInfo[i, j].color, (occurences[PanelInfo[i, j].color] - 1) % 5, 1] == PanelInfo[i, j].shape ? 1 : 0);
+                    Debug.LogFormat("[Button Sequences #{0}] Panel {1} Button {2} ({3} {4} {5}): Occurence #{6} {7}", moduleId, i + 1, j + 1, ColorNames[PanelInfo[i, j].color], ShapeNames[PanelInfo[i, j].shape], LabelNames[PanelInfo[i, j].text], occurences[PanelInfo[i, j].color], ActionNames[Solution[i, j]]);
+                }
             }
         }
     }
 
     // Button Methods
-    void UpdateButtons() {
+    private void UpdateButtons() {
         for (int i = 0; i < 3; i++) {
-            ButtonMeshes[i].mesh = Meshes[PanelInfo[currentPanel, i].shape];
-            ButtonMeshes[i].gameObject.GetComponent<Renderer>().sharedMaterial = Colors[PanelInfo[currentPanel, i].color];
-            ButtonStems[i].sharedMaterial = Colors[PanelInfo[currentPanel, i].color];
-            ButtonLabels[i].text = TextLabels[PanelInfo[currentPanel, i].text];
-            ButtonLabels[i].color = TextColors[PanelInfo[currentPanel, i].color];
-            ButtonHighlights[i].mesh = Meshes[PanelInfo[currentPanel, i].shape];
-            foreach (var filter in ButtonHighlights[i].gameObject.GetComponentsInChildren<MeshFilter>(true)) {
-                filter.mesh = Meshes[PanelInfo[currentPanel, i].shape];
+            if (PanelInfo[currentPanel, i] == null) {
+                Buttons[i].gameObject.SetActive(false);
+            } else {
+                Buttons[i].gameObject.SetActive(true);
+                ButtonMeshes[i].mesh = Meshes[PanelInfo[currentPanel, i].shape];
+                ButtonMeshes[i].gameObject.GetComponent<Renderer>().sharedMaterial = Colors[PanelInfo[currentPanel, i].color];
+                ButtonStems[i].sharedMaterial = Colors[PanelInfo[currentPanel, i].color];
+                ButtonLabels[i].text = TextLabels[PanelInfo[currentPanel, i].text];
+                ButtonLabels[i].color = TextColors[PanelInfo[currentPanel, i].color];
+                ButtonHighlights[i].mesh = Meshes[PanelInfo[currentPanel, i].shape];
+                foreach (var filter in ButtonHighlights[i].gameObject.GetComponentsInChildren<MeshFilter>(true)) {
+                    filter.mesh = Meshes[PanelInfo[currentPanel, i].shape];
+                }
             }
         }
     }
 
-    void LastPanel() {
+    private void LastPanel() {
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, this.transform);
         if (buttonsActive) {
             if (currentPanel > 0) {
@@ -218,7 +265,7 @@ public class ButtonSequencesModule : MonoBehaviour {
         }
     }
 
-    void NextPanel() {
+    private void NextPanel() {
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, this.transform);
         if (buttonsActive) {
             bool correct = true;
@@ -229,6 +276,7 @@ public class ButtonSequencesModule : MonoBehaviour {
                 }
             }
             if (correct && currentPanel < PanelCount - 1) {
+                Debug.LogFormat("[Button Sequences #{0}] Panel {1} completed successfully.", moduleId, currentPanel + 1);
                 Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.WireSequenceMechanism, this.transform);
                 foreach (var anim in ButtonAnimators) {
                     anim.Play("HideButtonAnimation");
@@ -239,9 +287,15 @@ public class ButtonSequencesModule : MonoBehaviour {
                     lightState[currentPanel, i] = 2;
                 }
                 currentPanel++;
+                for (int i = 0; i < currentPanel; i++) {
+                    StageIndicatorLights[i].SetActive(true);
+                }
             } else if (!correct) {
+                Debug.LogFormat("[Button Sequences #{0}] Strike: User tried to move past panel {1} without completing it.", moduleId, currentPanel + 1);
                 BombModule.HandleStrike();
             } else {
+                Debug.LogFormat("[Button Sequences #{0}] Panel {1} completed successfully.", moduleId, currentPanel + 1);
+                Debug.LogFormat("[Button Sequences #{0}] Module Solved.", moduleId, currentPanel + 1);
                 BombModule.HandlePass();
                 for (int i = 0; i < 3; i++) {
                     lightState[currentPanel, i] = 2;
@@ -250,38 +304,58 @@ public class ButtonSequencesModule : MonoBehaviour {
                 foreach (var anim in ButtonAnimators) {
                     anim.Play("Solve");
                 }
+                Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.WireSequenceMechanism, this.transform);
                 DoorAnimator.Play("Solve");
+                for (int i = 0; i < StageIndicatorLights.Length; i++) {
+                    StageIndicatorLights[i].SetActive(true);
+                }
                 buttonsActive = false;
             }
         }
     }
 
-    void PanelButtonRelease() {
+    private void PanelButtonRelease() {
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonRelease, this.transform);
     }
 
-    void ButtonRelease(int button) {
+    private void ButtonRelease(int button) {
         ButtonAnimators[button].Play("ButtonUpAnimation");
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.BigButtonRelease, this.transform);
         if (currentState[currentPanel, button] == Solution[currentPanel, button]) {
             BombModule.HandleStrike();
             lightState[currentPanel, button] = 1;
+            if (Solution[currentPanel, button] == 0) {
+                Debug.LogFormat("[Button Sequences #{0}] Strike: Panel {1} Button {2} pressed/held when not needed.", moduleId, currentPanel + 1, button + 1);
+            } else {
+                Debug.LogFormat("[Button Sequences #{0}] Strike: Panel {1} Button {2} pressed when already dealt with.", moduleId, currentPanel + 1, button + 1);
+            }
         } else {
-            if (holdTimer > 40) {
+            if (Time.time - holdTimer > 0.5f) {
                 string time = BombInfo.GetFormattedTime();
-                if (time.Contains(holdBombTime.ToString()) || time.Contains((holdBombTime + 5).ToString())) {
+                if (time.Length == 4) {
+                    time = '0' + time;
+                }
+                if (Solution[currentPanel, button] == 1) {
+                    BombModule.HandleStrike();
+                    lightState[currentPanel, button] = 1;
+                    Debug.LogFormat("[Button Sequences #{0}] Panel {1} Button {2} held when it shouldn't have been.", moduleId, currentPanel + 1, button + 1);
+                } else if (time.Contains(holdBombTime.ToString())) {
                     currentState[currentPanel, button] = 2;
                     lightState[currentPanel, button] = 2;
+                    Debug.LogFormat("[Button Sequences #{0}] Panel {1} Button {2} held successfully.", moduleId, currentPanel + 1, button + 1);
                 } else {
                     BombModule.HandleStrike();
                     lightState[currentPanel, button] = 1;
+                    Debug.LogFormat("[Button Sequences #{0}] Strike: Panel {1} Button {2} released at improper time. Current Time: {3}", moduleId, currentPanel + 1, button + 1, time);
                 }
             } else if (Solution[currentPanel, button] == 1) {
                 currentState[currentPanel, button] = 1;
                 lightState[currentPanel, button] = 2;
+                Debug.LogFormat("[Button Sequences #{0}] Panel {1} Button {2} pressed successfully.", moduleId, currentPanel + 1, button + 1);
             } else {
                 BombModule.HandleStrike();
                 lightState[currentPanel, button] = 1;
+                Debug.LogFormat("[Button Sequences #{0}] Strike: Panel {1} Button {2} pressed when it should have been held.", moduleId, currentPanel + 1, button + 1);
             }
         }
         UpdateLights();
@@ -290,17 +364,30 @@ public class ButtonSequencesModule : MonoBehaviour {
         holdBombTime = -1;
     }
 
-    void HandlePress(int button) {
+    private void HandlePress(int button) {
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.BigButtonPress, this.transform);
         ButtonAnimators[button].Play("ButtonDownAnimation");
         heldButton = button;
-        holdTimer = 0;
+        holdTimer = Time.time;
     }
 
     // Light Methods
-    void UpdateLights() {
+    private void UpdateLights() {
         for (int i = 0; i < 3; i++) {
-            Lights[i].sharedMaterial = LightColors[lightState[currentPanel, i]];
+            if (PanelInfo[currentPanel, i] == null) {
+                Lights[i].sharedMaterial = LightColors[7];
+            } else {
+                Lights[i].sharedMaterial = LightColors[lightState[currentPanel, i]];
+            }
+        }
+    }
+
+    private void ShuffleArray<T>(T[] arr) {
+        for (int t = 0; t < arr.Length; t++) {
+            T tmp = arr[t];
+            int r = Random.Range(t, arr.Length);
+            arr[t] = arr[r];
+            arr[r] = tmp;
         }
     }
 }
