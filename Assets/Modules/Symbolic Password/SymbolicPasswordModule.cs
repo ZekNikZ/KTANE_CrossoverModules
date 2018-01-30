@@ -195,6 +195,8 @@ public class SymbolicPasswordModule : MonoBehaviour
                     case "u":
                     case "up":
                     case "upper":
+                        if ((i + 1) == pieces.Length)
+                            return null;
                         switch (pieces[i + 1])
                         {
                             case "l": case "left": button = 6; break;
@@ -205,11 +207,29 @@ public class SymbolicPasswordModule : MonoBehaviour
                         i++;
                         break;
 
+                    case "tl":
+                    case "topleft":
+                    case "ul":
+                    case "upleft":
+                    case "upperleft":
+                        list.Add(buttons[6]);
+                        break;
+
+                    case "tr":
+                    case "topright":
+                    case "ur":
+                    case "upright":
+                    case "upperright":
+                        list.Add(buttons[7]);
+                        break;
+
                     case "b":
                     case "bottom":
                     case "d":
                     case "down":
                     case "lower":
+                        if ((i + 1) == pieces.Length)
+                            return null;
                         switch (pieces[i + 1])
                         {
                             case "l": case "left": button = 8; break;
@@ -218,6 +238,22 @@ public class SymbolicPasswordModule : MonoBehaviour
                         }
                         list.Add(buttons[button]);
                         i++;
+                        break;
+
+                    case "bl":
+                    case "bottomleft":
+                    case "dl":
+                    case "downleft":
+                    case "lowerleft":
+                        list.Add(buttons[8]);
+                        break;
+
+                    case "br":
+                    case "bottomright":
+                    case "dr":
+                    case "downright":
+                    case "lowerright":
+                        list.Add(buttons[9]);
                         break;
 
                     default:
