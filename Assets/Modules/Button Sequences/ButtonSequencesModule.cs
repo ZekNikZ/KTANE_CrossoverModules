@@ -1,4 +1,8 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections;
+using System.Linq;
+using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class ButtonSequencesModule : MonoBehaviour {
 
@@ -388,6 +392,143 @@ public class ButtonSequencesModule : MonoBehaviour {
             int r = Random.Range(t, arr.Length);
             arr[t] = arr[r];
             arr[r] = tmp;
+        }
+    }
+
+    private int _heldIndex = -1;
+    private string TwitchHelpMessage = "Tap the buttons with !{0} tap 1 3. Move to the next panel !{0} down. Move to the previous panel with !{0} up. Cycle the panels done so far with !{0} cycle.  Hold the button with !{0} hold 2. Release the button with !{0} release 7.  Buttons are 1, 2, and 3. If the only thing you need to do on the current panel are taps, you can tap and move to the next panel with !{0} tap 1 2 down.";
+    private IEnumerator ProcessTwitchCommand(string inputCommand)
+    {
+        string[] split = inputCommand.ToLowerInvariant().Split(new[] {" "}, StringSplitOptions.RemoveEmptyEntries);
+        switch (split[0])
+        {
+            case "cycle":
+                if (split.Length > 1) yield break;
+                yield return null;
+                if (_heldIndex > -1)
+                {
+                    yield return string.Format("sendtochaterror you can not cycle the panels until button {0} is released", _heldIndex + 1);
+                    yield break;
+                }
+                yield return null;
+                int panel = currentPanel;
+                while (currentPanel != 0)
+                {
+                    LastPanelButton.OnInteract();
+                    LastPanelButton.OnInteractEnded();
+                    yield return null;
+                    while (!DoorAnimator.GetCurrentAnimatorStateInfo(0).IsName("OpenIdle")) yield return null;
+                }
+                while (currentPanel != panel)
+                {
+                    yield return new WaitForSeconds(3.0f);
+                    NextPanelButton.OnInteract();
+                    NextPanelButton.OnInteractEnded();
+                    yield return null;
+                    while (!DoorAnimator.GetCurrentAnimatorStateInfo(0).IsName("OpenIdle")) yield return null;
+                }
+                yield return new WaitForSeconds(1.0f);
+                break;
+            case "up":
+            case "u":
+                if (split.Length > 1) yield break;
+                yield return null;
+                if (_heldIndex > -1)
+                {
+                    yield return string.Format("sendtochaterror you can not move to the previous panel until button {0} is released", _heldIndex + 1);
+                    yield break;
+                }
+                LastPanelButton.OnInteract();
+                LastPanelButton.OnInteractEnded();
+                yield return new WaitForSeconds(0.1f);
+                break;
+            case "down":
+            case "d":
+                if (split.Length > 1) yield break;
+                yield return null;
+                if (_heldIndex > -1)
+                {
+                    yield return string.Format("sendtochaterror you can not move to the next panel until button {0} is released", _heldIndex + 1);
+                    yield break;
+                }
+                yield return "strikemessage attempting to move to the next panel";
+                NextPanelButton.OnInteract();
+                NextPanelButton.OnInteractEnded();
+                yield return new WaitForSeconds(0.1f);
+                break;
+            case "hold":
+                int holdIndex;
+                if (split.Length != 2 || !int.TryParse(split[1], out holdIndex) || holdIndex < 1 || holdIndex > 3) yield break;
+                yield return null;
+                if (_heldIndex > -1)
+                {
+                    yield return string.Format("sendtochaterror you can not hold button {1} until button {0} is released", _heldIndex + 1, holdIndex);
+                    yield break;
+                }
+                _heldIndex = holdIndex - 1;
+                Buttons[_heldIndex].OnInteract();
+                yield return new WaitForSeconds(0.1f);
+                break;
+            case "release":
+                int releaseTime;
+                if (split.Length != 2 || !int.TryParse(split[1], out releaseTime) || releaseTime < 0 || releaseTime > 9) yield break;
+                if (_heldIndex == -1)
+                {
+                    yield return null;
+                    yield return "sendtochaterror you are not currently holding any buttons.";
+                    yield break;
+                }
+                yield return null;
+                string time = BombInfo.GetFormattedTime();
+                if (time.Length == 4)
+                    time = '0' + time;
+                while (!time.Contains(releaseTime.ToString()))
+                {
+                    yield return null;
+                    time = BombInfo.GetFormattedTime();
+                    if (time.Length == 4)
+                        time = '0' + time;
+                }
+                Buttons[_heldIndex].OnInteractEnded();
+                _heldIndex = -1;
+                yield return new WaitForSeconds(0.1f);
+                break;
+            case "tap":
+                string[] validTaps = new[] { "up", "u", "down", "d", "1", "2", "3" };
+                if (split.Skip(1).Any(x => !validTaps.Contains(x))) yield break;
+                if (split.Length == 1) yield break;
+                yield return null;
+                if (_heldIndex > -1)
+                {
+                    yield return string.Format("sendtochaterror you can not tap any buttons or change panels until button {0} is released", _heldIndex + 1);
+                    yield break;
+                }
+                foreach (string tap in split.Skip(1))
+                {
+                    if (tap == "up" || tap == "u")
+                    {
+                        LastPanelButton.OnInteract();
+                        LastPanelButton.OnInteractEnded();
+                        yield return new WaitForSeconds(0.1f);
+                        break;
+                    }
+                    if (tap == "down" || tap == "d")
+                    {
+                        yield return "strikemessage attempting to move to the next panel";
+                        NextPanelButton.OnInteract();
+                        NextPanelButton.OnInteractEnded();
+                        yield return new WaitForSeconds(0.1f);
+                        break;
+                    }
+                    yield return "strikemessage tapping button " + tap;
+                    int tapIndex = int.Parse(tap);
+                    Buttons[tapIndex - 1].OnInteract();
+                    Buttons[tapIndex - 1].OnInteractEnded();
+                    yield return new WaitForSeconds(0.1f);
+                }
+                break;
+            default:
+                yield break;
         }
     }
 }
