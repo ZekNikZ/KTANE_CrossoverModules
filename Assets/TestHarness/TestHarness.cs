@@ -1,9 +1,10 @@
-using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-
 using System.Reflection;
 using Newtonsoft.Json;
+using UnityEngine;
 
 public class FakeBombInfo : MonoBehaviour
 {
@@ -184,8 +185,6 @@ public class FakeBombInfo : MonoBehaviour
     public delegate void LightsOn();
     public LightsOn ActivateLights;
 
-    private Widget widgetHandler;
-
     void FixedUpdate()
     {
         if (solved) return;
@@ -365,6 +364,7 @@ public class TestHarness : MonoBehaviour
     private FakeBombInfo fakeInfo;
 
     public GameObject HighlightPrefab;
+    public Transform TwitchPlaysCameraTransform;
     TestSelectable currentSelectable;
     TestSelectableArea currentSelectableArea;
 
@@ -479,6 +479,22 @@ public class TestHarness : MonoBehaviour
                 fakeInfo.HandleStrike();
                 return false;
             };
+            KMModSettings settings = modules[i].GetComponent<KMModSettings>();
+            if (settings != null)
+            {
+                try
+                {
+                    if (File.Exists("Assets/modSettings.json"))
+                    {
+                        settings.Settings = File.ReadAllText("Assets/modSettings.json");
+                    }
+                }
+                catch
+                {
+                    //
+                }
+                settings.SettingsPath = "Assets/modSettings.json";
+            }
         }
 
         for (int i = 0; i < needyModules.Length; i++)
@@ -497,6 +513,23 @@ public class TestHarness : MonoBehaviour
                 fakeInfo.HandleStrike();
                 return false;
             };
+
+            KMModSettings settings = needyModules[i].GetComponent<KMModSettings>();
+            if (settings != null)
+            {
+                try
+                {
+                    if (File.Exists("Assets/modSettings.json"))
+                    {
+                        settings.Settings = File.ReadAllText("Assets/modSettings.json");
+                    }
+                }
+                catch
+                {
+                    //
+                }
+                settings.SettingsPath = "Assets/modSettings.json";
+            }
         }
 
         currentSelectable.ActivateChildSelectableAreas();
@@ -571,6 +604,11 @@ public class TestHarness : MonoBehaviour
                 currentSelectable.DeactivateChildSelectableAreas(currentSelectableArea.Selectable);
                 currentSelectable = currentSelectableArea.Selectable;
                 currentSelectable.ActivateChildSelectableAreas();
+                if (currentSelectable.Parent.transform != null && currentSelectable.Parent.transform.name == "TestHarness")
+                {
+                    TwitchPlaysCameraTransform.SetParent(currentSelectable.transform, false);
+                    TwitchPlaysCameraTransform.gameObject.SetActive(true);
+                }
             }
         }
 
@@ -589,6 +627,10 @@ public class TestHarness : MonoBehaviour
                 currentSelectable.DeactivateChildSelectableAreas(currentSelectable.Parent);
                 currentSelectable = currentSelectable.Parent;
                 currentSelectable.ActivateChildSelectableAreas();
+                if (currentSelectable.transform != null && currentSelectable.transform.name == "TestHarness")
+                {
+                    TwitchPlaysCameraTransform.gameObject.SetActive(false);
+                }
             }
         }
     }
@@ -631,6 +673,155 @@ public class TestHarness : MonoBehaviour
         }
     }
 
+    // TPK Methods
+    protected void DoInteractionStart(KMSelectable interactable)
+    {
+        interactable.OnInteract();
+    }
+
+    protected void DoInteractionEnd(KMSelectable interactable)
+    {
+        if (interactable.OnInteractEnded != null)
+        {
+            interactable.OnInteractEnded();
+        }
+    }
+
+    Dictionary<Component, HashSet<KMSelectable>> ComponentHelds = new Dictionary<Component, HashSet<KMSelectable>> { };
+    IEnumerator SimulateModule(Component component, Transform moduleTransform, MethodInfo method, string command)
+    {
+        // Simple Command
+        if (method.ReturnType == typeof(KMSelectable[]))
+        {
+            KMSelectable[] selectableSequence = null;
+            try
+            {
+                selectableSequence = (KMSelectable[]) method.Invoke(component, new object[] { command });
+                if (selectableSequence == null)
+                {
+                    yield break;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogErrorFormat("An exception occurred while trying to invoke {0}.{1}; the command invokation will not continue.", method.DeclaringType.FullName, method.Name);
+                Debug.LogException(ex);
+                yield break;
+            }
+
+            int initialStrikes = fakeInfo.strikes;
+            int initialSolved = fakeInfo.GetSolvedModuleNames().Count;
+            foreach (KMSelectable selectable in selectableSequence)
+            {
+                DoInteractionStart(selectable);
+                yield return new WaitForSeconds(0.1f);
+                DoInteractionEnd(selectable);
+
+                if (fakeInfo.strikes != initialStrikes || fakeInfo.GetSolvedModuleNames().Count != initialSolved)
+                {
+                    break;
+                }
+            };
+        }
+
+        // Complex Commands
+        if (method.ReturnType == typeof(IEnumerator))
+        {
+            IEnumerator responseCoroutine = null;
+            try
+            {
+                responseCoroutine = (IEnumerator) method.Invoke(component, new object[] { command });
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogErrorFormat("An exception occurred while trying to invoke {0}.{1}; the command invokation will not continue.", method.DeclaringType.FullName, method.Name);
+                Debug.LogException(ex);
+                yield break;
+            }
+
+            if (responseCoroutine == null)
+                yield break;
+
+            if (!ComponentHelds.ContainsKey(component))
+                ComponentHelds[component] = new HashSet<KMSelectable>();
+            HashSet<KMSelectable> heldSelectables = ComponentHelds[component];
+
+            int initialStrikes = fakeInfo.strikes;
+            int initialSolved = fakeInfo.GetSolvedModuleNames().Count;
+            bool needQuaternionReset = false;
+            Dictionary<Transform, int> transformLayers = new Dictionary<Transform, int>();
+
+            while (responseCoroutine.MoveNext())
+            {
+                object currentObject = responseCoroutine.Current;
+                if (currentObject is KMSelectable)
+                {
+                    KMSelectable selectable = (KMSelectable) currentObject;
+                    if (heldSelectables.Contains(selectable))
+                    {
+                        DoInteractionEnd(selectable);
+                        heldSelectables.Remove(selectable);
+                        if (fakeInfo.strikes != initialStrikes || fakeInfo.GetSolvedModuleNames().Count != initialSolved)
+                            yield break;
+                    }
+                    else
+                    {
+                        DoInteractionStart(selectable);
+                        heldSelectables.Add(selectable);
+                    }
+                }
+                else if (currentObject is string)
+                {
+                    Debug.Log("Twitch handler sent: " + currentObject);
+                    yield return currentObject;
+                }
+                else if (currentObject is Quaternion)
+                {
+                    moduleTransform.localRotation = (Quaternion) currentObject;
+                    needQuaternionReset = true;
+                }
+                else if (currentObject is Quaternion[])
+                {
+                    Camera cam = TwitchPlaysCameraTransform.GetComponentInChildren<Camera>();
+                    cam.cullingMask = 1 << 12;
+                    Transform parentTransform = TwitchPlaysCameraTransform.parent;
+                    foreach (Transform t in parentTransform.GetComponentsInChildren<Transform>())
+                    {
+                        if (!transformLayers.ContainsKey(t))
+                            transformLayers[t] = t.gameObject.layer;
+                        t.gameObject.layer = 12;
+                    }
+
+                    moduleTransform.localRotation = ((Quaternion[]) currentObject)[0];
+                    Quaternion quaternion = ((Quaternion[]) currentObject)[1];
+                    TwitchPlaysCameraTransform.localRotation = Quaternion.Euler(-quaternion.eulerAngles);
+                    needQuaternionReset = true;
+                }
+                else
+                    yield return currentObject;
+
+                if (fakeInfo.strikes != initialStrikes || fakeInfo.GetSolvedModuleNames().Count != initialSolved)
+                    break;
+            }
+            if (needQuaternionReset)
+            {
+                moduleTransform.localRotation = Quaternion.identity;
+                TwitchPlaysCameraTransform.localRotation = Quaternion.identity;
+                Camera cam = TwitchPlaysCameraTransform.GetComponentInChildren<Camera>();
+                cam.cullingMask = -1;
+                Transform parentTransform = TwitchPlaysCameraTransform.parent;
+                foreach (Transform t in parentTransform.GetComponentsInChildren<Transform>())
+                {
+                    if (transformLayers.ContainsKey(t))
+                        t.gameObject.layer = transformLayers[t];
+                    else
+                        t.gameObject.layer = 11;
+                }
+            }
+        }
+    }
+
+    string command = "";
     void OnGUI()
     {
         if (GUILayout.Button("Activate Needy Modules"))
@@ -668,6 +859,28 @@ public class TestHarness : MonoBehaviour
         }
 
         GUILayout.Label("Time remaining: " + fakeInfo.GetFormattedTime());
+
+        GUILayout.Space(10);
+
+        command = GUILayout.TextField(command);
+        if ((GUILayout.Button("Simulate Twitch Command") || Event.current.keyCode == KeyCode.Return) && command != "")
+        {
+            Debug.Log("Twitch Command: " + command);
+
+            Component[] allComponents = currentSelectable.gameObject.GetComponentsInChildren<Component>(true);
+            foreach (Component component in allComponents)
+            {
+                System.Type type = component.GetType();
+                MethodInfo method = type.GetMethod("ProcessTwitchCommand", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+                if (method != null)
+                {
+                    StartCoroutine(SimulateModule(component, currentSelectable.transform, method, command));
+                }
+            }
+
+            command = "";
+        }
     }
 
     private Light testLight;
@@ -681,7 +894,7 @@ public class TestHarness : MonoBehaviour
 
         GameObject o = new GameObject("Light");
         o.transform.localPosition = new Vector3(0, 3, 0);
-        o.transform.localRotation = Quaternion.Euler(new Vector3(50, -30, 0));
+        o.transform.localRotation = Quaternion.Euler(new Vector3(130, -30, 0));
         testLight = o.AddComponent<Light>();
         testLight.type = LightType.Directional;
     }
