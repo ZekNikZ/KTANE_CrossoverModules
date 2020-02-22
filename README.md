@@ -1,1 +1,1 @@
-#[ModKit Wiki](../../wiki)
+[Now maintained here](https://github.com/Timwi/KtaneCrossoverModules)
